@@ -1,0 +1,8 @@
+# Elasticsearch 单节点配置
+cluster.name: "docker-cluster"
+node.name: "es-node-1"
+network.host: 0.0.0.0
+http.port: 9200
+transport.port: 9300
+discovery.type: single-node
+xpack.security.enabled: false

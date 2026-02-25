@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  python-app:
+    image: python:3.12-slim
+    container_name: python-app
+    restart: always
+    working_dir: /app
+    volumes:
+      - ./src:/app
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - shared-network
+    depends_on:
+      - redis
+      - postgres
+
+  # 示例：连接 Redis
+  redis:
+    external: true
+    name: redis
+
+  # 示例：连接 PostgreSQL
+  postgres:
+    external: true
+    name: postgres
+
+networks:
+  shared-network:
+    external: true

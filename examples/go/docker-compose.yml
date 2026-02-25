@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  go-app:
+    image: golang:1.21
+    container_name: go-app
+    restart: always
+    working_dir: /app
+    volumes:
+      - ./src:/app
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - shared-network
+    depends_on:
+      - redis
+
+  # 示例：连接 Redis
+  redis:
+    external: true
+    name: redis
+
+networks:
+  shared-network:
+    external: true

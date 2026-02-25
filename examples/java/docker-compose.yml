@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  java-app:
+    image: eclipse-temurin:17-jdk
+    container_name: java-app
+    restart: always
+    working_dir: /app
+    volumes:
+      - ./src:/app
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - shared-network
+    depends_on:
+      - mysql8
+      - redis
+
+  # 示例：连接 MySQL 8
+  mysql8:
+    external: true
+    name: mysql8
+
+  # 示例：连接 Redis
+  redis:
+    external: true
+    name: redis
+
+networks:
+  shared-network:
+    external: true

@@ -1,0 +1,178 @@
+version: '3.8'
+
+services:
+  # MySQL 5.7 (需要 platform: linux/amd64 以支持 Mac M1/M2/M3)
+  mysql57:
+    image: mysql:5.7
+    platform: linux/amd64
+    container_name: mysql57
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: default
+      MYSQL_USER: devuser
+      MYSQL_PASSWORD: devpassword
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./mysql57/conf/my.cnf:/etc/mysql/my.cnf:ro
+      - ./mysql57/data:/var/lib/mysql
+      - ./mysql57/logs:/var/log/mysql
+    networks:
+      - shared-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MySQL 8
+  mysql8:
+    image: mysql:8.0
+    container_name: mysql8
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: default
+      MYSQL_USER: devuser
+      MYSQL_PASSWORD: devpassword
+    ports:
+      - "3308:3306"
+    volumes:
+      - ./mysql8/conf/my.cnf:/etc/mysql/my.cnf:ro
+      - ./mysql8/data:/var/lib/mysql
+      - ./mysql8/logs:/var/log/mysql
+    networks:
+      - shared-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postgres123456
+      POSTGRES_DB: default
+      POSTGRES_USER: devuser
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgsql/data:/var/lib/postgresql/data
+    networks:
+      - shared-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devuser -d default"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always
+    command: redis-server /etc/redis/redis.conf --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis/conf/redis.conf:/etc/redis/redis.conf:ro
+      - ./redis/data:/data
+    networks:
+      - shared-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:management-alpine
+    container_name: rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - ./rabbitmq/data:/var/lib/rabbitmq
+    networks:
+      - shared-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Elasticsearch
+  elasticsearch:
+    image: elasticsearch:7.17.9
+    container_name: elasticsearch
+    restart: always
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+      - ./elasticsearch/data:/usr/share/elasticsearch/data
+    networks:
+      - shared-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -E '\"status\":\"(green|yellow)\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # MongoDB
+  mongodb:
+    image: mongo:6
+    container_name: mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root123456
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./mongo/data:/data/db
+    networks:
+      - shared-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Nginx
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - ./nginx/conf:/etc/nginx/conf.d:ro
+    networks:
+      - shared-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  shared-network:
+    name: shared-network
+    driver: bridge
