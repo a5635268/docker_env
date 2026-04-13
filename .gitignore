@@ -1,6 +1,11 @@
 .*
 !.gitignore
+!.dockerignore
 *.log
 
 # 中间件数据目录（不纳入版本控制）
 middleware/*/data/
+
+# 环境变量文件（包含敏感凭据）
+middleware/.env
+!.env.example

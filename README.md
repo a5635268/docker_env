@@ -31,7 +31,15 @@ docker-env/
 
 ## 快速开始
 
-### 1. 创建共享网络
+### 1. 配置环境变量
+
+```bash
+cd middleware
+cp .env.example .env
+# 根据需要修改 .env 中的密码
+```
+
+### 2. 创建共享网络
 
 ```bash
 # 方法 1：使用脚本
@@ -41,14 +49,12 @@ docker-env/
 docker network create shared-network
 ```
 
-### 2. 启动中间件
+### 3. 启动中间件
 
 ```bash
 cd middleware
 docker-compose up -d
 ```
-
-### 3. 启动项目示例
 
 ```bash
 # PHP 多项目（推荐使用管理脚本）
@@ -76,7 +82,7 @@ cd examples/go
 docker-compose up -d
 ```
 
-### 4.宿主机中间件 + 容器 PHP 模式
+### 4. 启动项目示例
 
 `local` 目录是在根目录下提供的一套适合本机开发的 PHP74 环境，架构模式为：
 
@@ -125,16 +131,19 @@ $pdo = new PDO('mysql:host=host.docker.internal;port=3306;dbname=yourdb', 'user'
 
 ## 中间件服务一览
 
-| 服务 | 容器名 | 宿主机端口 | 容器内端口 | 项目内连接 host | 用户名/密码 |
-|------|--------|------------|------------|-----------------|-------------|
-| MySQL 5.7 | mysql57 | 3307 | 3306 | `mysql57:3306` | root/root123456, devuser/devpassword |
-| MySQL 8 | mysql8 | 3308 | 3306 | `mysql8:3306` | root/root123456, devuser/devpassword |
-| PostgreSQL | postgres | 5432 | 5432 | `postgres:5432` | devuser/postgres123456 |
-| Redis | redis | 6379 | 6379 | `redis:6379` | 无密码 |
-| RabbitMQ | rabbitmq | 5672, 15672 | 5672, 15672 | `rabbitmq:5672` | guest/guest |
-| Elasticsearch | elasticsearch | 9200, 9300 | 9200, 9300 | `elasticsearch:9200` | 无认证 |
-| MongoDB | mongodb | 27017 | 27017 | `mongodb:27017` | root/root123456 |
-| Nginx | nginx | 80, 8080 | 80 | `nginx:80` | - |
+| 服务 | 容器名 | 宿主机端口 | 容器内连接 | 用户名/密码 |
+|------|--------|------------|-----------|-------------|
+| MySQL 5.7 | mysql57 | 127.0.0.1:3307 | `mysql57:3306` | 见 .env |
+| MySQL 8 | mysql8 | 127.0.0.1:3308 | `mysql8:3306` | 见 .env |
+| PostgreSQL | postgres | 127.0.0.1:5432 | `postgres:5432` | 见 .env |
+| Redis | redis | 127.0.0.1:6379 | `redis:6379` | 见 .env (需密码) |
+| RabbitMQ | rabbitmq | 127.0.0.1:5672, 127.0.0.1:15672 | `rabbitmq:5672` | 见 .env |
+| Elasticsearch | elasticsearch | 127.0.0.1:9200, 127.0.0.1:9300 | `elasticsearch:9200` | 见 .env (需密码) |
+| MongoDB | mongodb | 127.0.0.1:27017 | `mongodb:27017` | 见 .env |
+| Nginx | nginx | 127.0.0.1:80, 127.0.0.1:8080 | `nginx:80` | - |
+
+> 所有端口仅绑定到 127.0.0.1，确保本地开发安全。
+> 凭据统一通过 `middleware/.env` 管理，请勿直接编辑 docker-compose.yml。
 
 ## 连接示例
 
@@ -149,6 +158,14 @@ $pdo = new PDO(
 );
 ```
 
+### PHP 连接 Redis（需密码）
+
+```php
+$redis = new Redis();
+$redis->connect('redis', 6379);
+$redis->auth('devredis123');  // 密码见 .env
+```
+
 ### Java (Spring Boot) 连接 MySQL 8
 
 ```properties
@@ -157,11 +174,11 @@ spring.datasource.username=devuser
 spring.datasource.password=devpassword
 ```
 
-### Python 连接 Redis
+### Python 连接 Redis（需密码）
 
 ```python
 import redis
-r = redis.Redis(host='redis', port=6379, db=0)
+r = redis.Redis(host='redis', port=6379, password='devredis123', db=0)
 ```
 
 ### Python 连接 PostgreSQL
@@ -177,14 +194,26 @@ conn = connect(
 )
 ```
 
-### Go 连接 Redis
+### Go 连接 Redis（需密码）
 
 ```go
 import "github.com/go-redis/redis/v8"
 
 rdb := redis.NewClient(&redis.Options{
-    Addr: "redis:6379",
+    Addr:     "redis:6379",
+    Password: "devredis123",
 })
+```
+
+### 连接 Elasticsearch（需密码）
+
+```bash
+curl -u elastic:dev_es_123 http://127.0.0.1:9200
+```
+
+```python
+from elasticsearch import Elasticsearch
+es = Elasticsearch(["http://elasticsearch:9200"], basic_auth=("elastic", "dev_es_123"))
 ```
 
 ## Mac 优化建议
