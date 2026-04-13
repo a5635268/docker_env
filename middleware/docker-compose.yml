@@ -1,19 +1,26 @@
-version: '3.8'
+# Docker 中间件编排配置
+# 凭据管理：修改 middleware/.env 文件，不要直接编辑此文件中的密码
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
 
 services:
   # MySQL 5.7 (需要 platform: linux/amd64 以支持 Mac M1/M2/M3)
   mysql57:
-    image: mysql:5.7
+    image: mysql:5.7.44
     platform: linux/amd64
     container_name: mysql57
-    restart: always
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root123456
-      MYSQL_DATABASE: default
-      MYSQL_USER: devuser
-      MYSQL_PASSWORD: devpassword
+      MYSQL_ROOT_PASSWORD: ${MYSQL57_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL57_DATABASE}
+      MYSQL_USER: ${MYSQL57_USER}
+      MYSQL_PASSWORD: ${MYSQL57_PASSWORD}
     ports:
-      - "3307:3306"
+      - "127.0.0.1:3307:3306"
     volumes:
       - ./mysql57/conf/my.cnf:/etc/mysql/my.cnf:ro
       - ./mysql57/data:/var/lib/mysql
@@ -21,23 +28,31 @@ services:
     networks:
       - shared-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123456"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL57_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 60s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
 
   # MySQL 8
   mysql8:
-    image: mysql:8.0
+    image: mysql:8.0.36
     container_name: mysql8
-    restart: always
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root123456
-      MYSQL_DATABASE: default
-      MYSQL_USER: devuser
-      MYSQL_PASSWORD: devpassword
+      MYSQL_ROOT_PASSWORD: ${MYSQL8_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL8_DATABASE}
+      MYSQL_USER: ${MYSQL8_USER}
+      MYSQL_PASSWORD: ${MYSQL8_PASSWORD}
     ports:
-      - "3308:3306"
+      - "127.0.0.1:3308:3306"
     volumes:
       - ./mysql8/conf/my.cnf:/etc/mysql/my.cnf:ro
       - ./mysql8/data:/var/lib/mysql
@@ -45,62 +60,86 @@ services:
     networks:
       - shared-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123456"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL8_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 60s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
 
   # PostgreSQL
   postgres:
-    image: postgres:15-alpine
+    image: postgres:15.6-alpine
     container_name: postgres
-    restart: always
+    restart: unless-stopped
     environment:
-      POSTGRES_PASSWORD: postgres123456
-      POSTGRES_DB: default
-      POSTGRES_USER: devuser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - ./pgsql/data:/var/lib/postgresql/data
     networks:
       - shared-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U devuser -d default"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
 
   # Redis
   redis:
-    image: redis:7-alpine
+    image: redis:7.2.4-alpine
     container_name: redis
-    restart: always
-    command: redis-server /etc/redis/redis.conf --appendonly yes
+    restart: unless-stopped
+    command: redis-server /etc/redis/redis.conf --appendonly yes --requirepass ${REDIS_PASSWORD}
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - ./redis/conf/redis.conf:/etc/redis/redis.conf:ro
       - ./redis/data:/data
     networks:
       - shared-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
 
   # RabbitMQ
   rabbitmq:
-    image: rabbitmq:management-alpine
+    image: rabbitmq:3.13-management-alpine
     container_name: rabbitmq
-    restart: always
+    restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
     volumes:
       - ./rabbitmq/data:/var/lib/rabbitmq
     networks:
@@ -110,40 +149,60 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 40s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
 
   # Elasticsearch
   elasticsearch:
     image: elasticsearch:7.17.9
     container_name: elasticsearch
-    restart: always
+    restart: unless-stopped
     environment:
       - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=${ES_JAVA_OPTS}"
+      - xpack.security.enabled=true
+      - xpack.security.enrollment.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - ELASTIC_PASSWORD=${ES_PASSWORD}
     ports:
-      - "9200:9200"
-      - "9300:9300"
+      - "127.0.0.1:9200:9200"
+      - "127.0.0.1:9300:9300"
     volumes:
       - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
       - ./elasticsearch/data:/usr/share/elasticsearch/data
     networks:
       - shared-network
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -E '\"status\":\"(green|yellow)\"'"]
+      test: ["CMD-SHELL", "curl -s -u elastic:${ES_PASSWORD} http://localhost:9200/_cluster/health | grep -E '\"status\":\"(green|yellow)\"'"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 60s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
 
   # MongoDB
   mongodb:
-    image: mongo:6
+    image: mongo:6.0.14
     container_name: mongodb
-    restart: always
+    restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: root123456
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - ./mongo/data:/data/db
     networks:
@@ -153,15 +212,23 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 40s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
 
   # Nginx
   nginx:
-    image: nginx:alpine
+    image: nginx:1.25-alpine
     container_name: nginx
-    restart: always
+    restart: unless-stopped
     ports:
-      - "80:80"
-      - "8080:8080"
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:8080:8080"
     volumes:
       - ./nginx/conf:/etc/nginx/conf.d:ro
     networks:
@@ -171,6 +238,14 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 10s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 32M
 
 networks:
   shared-network:

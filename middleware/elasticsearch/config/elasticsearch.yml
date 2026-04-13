@@ -5,4 +5,9 @@ network.host: 0.0.0.0
 http.port: 9200
 transport.port: 9300
 discovery.type: single-node
-xpack.security.enabled: false
+
+# 安全配置（密码通过环境变量 ELASTIC_PASSWORD 设置）
+xpack.security.enabled: true
+xpack.security.enrollment.enabled: true
+xpack.security.http.ssl.enabled: false
+xpack.security.transport.ssl.enabled: false
