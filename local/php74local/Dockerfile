@@ -1,3 +1,6 @@
+# WARNING: PHP 7.4 已于 2022年11月28日停止维护 (EOL)
+# 不再接收任何安全补丁。仅用于无法升级的遗留项目。
+# 新项目请使用 PHP 8.2+ 版本。
 FROM php:7.4-fpm-alpine
 
 LABEL maintainer="xiaogang.zhou@qq.com"
