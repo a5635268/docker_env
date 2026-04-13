@@ -1,10 +1,8 @@
-version: '3.8'
-
 services:
   php-app:
-    image: php:8.2-fpm
+    image: php:8.2.16-fpm
     container_name: php-app
-    restart: always
+    restart: unless-stopped
     working_dir: /var/www/html
     volumes:
       - ./src:/var/www/html
@@ -28,4 +26,3 @@ services:
 networks:
   shared-network:
     external: true
-

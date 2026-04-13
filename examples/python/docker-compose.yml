@@ -1,10 +1,8 @@
-version: '3.8'
-
 services:
   python-app:
-    image: python:3.12-slim
+    image: python:3.12.2-slim
     container_name: python-app
-    restart: always
+    restart: unless-stopped
     working_dir: /app
     volumes:
       - ./src:/app
