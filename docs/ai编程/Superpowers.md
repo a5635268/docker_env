@@ -8,6 +8,8 @@ Superpowers 是在 2026 年 AI 辅助开发领域非常火热的一个**代理�
 
 **注意：** 本文档已根据最新版本的 Superpowers 技能更新。旧版本中的 `/superpowers:start` 等命令已废弃，改为直接调用技能工具。
 
+![5bda5f4b88e76bc13ebcf7b1787f165f](./assets/5bda5f4b88e76bc13ebcf7b1787f165f.jpg)
+
 ---
 
 ## 目录

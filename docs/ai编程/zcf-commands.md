@@ -4,6 +4,35 @@
 
 ---
 
+## 关于 ZCF
+
+ZCF 是一个**独立的 npm 包**，不是 superpowers marketplace 的 skills。
+
+### 项目信息
+
+| 项目 | 详情 |
+|------|------|
+| **名称** | ZCF - Zero-Config Code Flow |
+| **GitHub** | [UfoMiao/zcf](https://github.com/UfoMiao/zcf) (⭐ 5.9k) |
+| **NPM** | `zcf` |
+| **文档** | https://zcf.ufomiao.com/ |
+| **描述** | Claude Code & Codex 零配置一键安装，含双语支持、智能代理系统、个性化 AI 助手 |
+
+### 主要功能
+
+```bash
+npx zcf          # 打开交互菜单
+npx zcf i        # 全量初始化：安装 + workflows + API/CCR + MCP
+npx zcf u        # 仅更新 workflows
+npx zcf --lang zh-CN  # 切换语言
+```
+
+### 说明
+
+本文档中的 `/zcf:*` 命令是**本地自定义 commands**，存放在 `~/.claude/commands/zcf/` 目录下，命名风格借鉴了 ZCF 项目，但它们是本地文件，不是从 ZCF npm 包安装的。
+
+---
+
 ## 命令总览
 
 | 命令 | 类型 | 说明 |
