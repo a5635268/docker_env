@@ -129,12 +129,29 @@ planned → 直接开始 harness-run
 
 ```
 项目/.harness/
-├── feature_list.json    # 任务清单（空骨架）
-├── progress.txt         # 进度日志
-├── init.sh              # 启动脚本
-├── config.json          # Harness 配置
-└── .gitignore           # 排除临时文件
+├── CLAUDE.md              # 项目上下文（区分旧系统/新系统）
+├── feature_list.json      # 任务清单（空骨架）
+├── progress.txt           # 进度日志
+├── init.sh                # 启动脚本
+├── config.json            # Harness 配置
+├── design/                # 任务级设计文档目录
+│   └── .gitkeep
+└── .gitignore             # 排除临时文件
 ```
+
+### CLAUDE.md 生成策略
+
+| 场景 | 策略 | 说明 |
+|------|------|------|
+| **旧系统 + 有根目录 CLAUDE.md** | Link | 链接引用根目录文件 |
+| **旧系统 + 无 CLAUDE.md** | Analyze | 自动分析项目结构生成 |
+| **新系统** | Interactive | 交互式收集架构信息生成 |
+
+**新系统额外收集**：
+- 架构模式（monolith/microservice/modular/serverless）
+- 技术约定（REST API/GraphQL/SSR）
+- 代码风格（functional/oop/mixed）
+- 测试框架（Jest/PHPUnit/pytest）
 
 ---
 
@@ -148,9 +165,21 @@ planned → 直接开始 harness-run
 
 | 模式 | 说明 | 适用场景 |
 |------|------|----------|
-| **A. 交互式录入** | 逐个对话录入任务 | 小型项目、手动定义 |
-| **B. 文档导入** | 解析现有文档生成任务 | 有需求文档的项目 |
-| **C. AI 拆解** | 输入高层目标自动拆解 | 快速启动新项目 |
+| **A. 交互式录入** | 逐个对话录入任务 + 生成设计文档 | 小型项目、手动定义 |
+| **B. 文档导入** | 解析现有文档生成任务 + 设计文档 | 有需求文档的项目 |
+| **C. AI 拆解** | 自动拆解 + 整体架构 + 任务级设计 | 快速启动新项目 |
+
+**生成文件**：
+
+```
+.harness/
+├── architecture.md        # 整体架构设计（新系统 AI 拆解模式）
+├── feature_list.json      # 任务清单
+├── design/                # 任务级设计文档
+│   ├── feat-001.md        # 每个任务的实现指导
+│   ├── feat-002.md
+│   └── ...
+```
 
 **任务数据结构**：
 
@@ -162,6 +191,7 @@ planned → 直接开始 harness-run
   "steps": ["步骤1", "步骤2"],
   "priority": 2,
   "depends_on": [],
+  "design_file": "design/feat-001.md",
   "passes": false
 }
 ```
@@ -176,6 +206,7 @@ planned → 直接开始 harness-run
 | steps | array | 验证步骤列表 |
 | priority | integer | 优先级 1-5，1最高 |
 | depends_on | array | 依赖任务 ID 列表 |
+| design_file | string | 任务级设计文档路径 |
 | passes | boolean | 是否完成验证 |
 
 ---
@@ -283,6 +314,22 @@ planned → 直接开始 harness-run
 | planned | 有任务列表 | 可执行 harness-run、harness-status |
 | running | 存在未完成任务 | 可执行 harness-run、harness-status |
 | completed | 所有任务完成 | 可执行 harness-status、重置任务 |
+
+---
+
+## 读写时机
+
+| 会话启动时读取 | 任务完成后更新 |
+|---------------|---------------|
+| `.harness/CLAUDE.md` | `.harness/progress.txt` |
+| `.harness/architecture.md`（新系统） | `.harness/design/<task-id>.md`（可选补充） |
+| `.harness/design/<current-task>.md` | `.harness/feature_list.json`（passes 字段） |
+| `.harness/feature_list.json` | Git commit |
+
+**设计文档作用**：
+- CLAUDE.md：项目级上下文，每次会话必读
+- architecture.md：整体架构设计，指导所有任务实现
+- design/<task-id>.md：任务级实现指导，包含关键技术点、注意事项
 
 ---
 
