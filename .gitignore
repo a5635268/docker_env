@@ -1,6 +1,7 @@
 .*
 !.gitignore
 !.dockerignore
+!.harness-skills/
 *.log
 
 # 中间件数据目录（不纳入版本控制）
