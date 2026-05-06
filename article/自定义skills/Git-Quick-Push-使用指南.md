@@ -1,6 +1,6 @@
 # Git Quick Push Skill 使用指南
 
-一键 Git commit 和 push 到远程仓库，支持代理切换。
+一键 Git commit 和 push 到远程仓库，支持 HTTP/SSH 代理切换。
 
 ## 功能特性
 
@@ -8,7 +8,9 @@
 - ✅ 自动生成 commit message（基于改动统计）
 - ✅ `pull --rebase` 拉取远程更新（避免冲突）
 - ✅ 推送到远程仓库（默认 origin + 当前分支）
-- ✅ HTTP_PROXY 代理切换（默认端口 7890）
+- ✅ **智能代理支持**：
+  - HTTP 远程仓库：设置 HTTP_PROXY/HTTPS_PROXY
+  - SSH 远程仓库：使用 GIT_SSH_COMMAND + ProxyCommand (SOCKS5)
 - ✅ 支持自定义 commit message
 - ✅ Dry-run 模式预览
 
@@ -109,9 +111,18 @@
 
 ## 代理配置
 
-代理端口固定为 **7890**：
-- 默认使用代理 → 设置 `HTTP_PROXY=http://127.0.0.1:7890`
-- 关闭代理 → `--no-proxy` 清除代理环境变量
+代理端口固定为 **7890**，默认使用代理：
+
+| 远程仓库类型 | 代理方式 |
+|------------|---------|
+| HTTP (`https://github.com/...`) | HTTP_PROXY/HTTPS_PROXY |
+| SSH (`git@github.com:...`) | GIT_SSH_COMMAND + ProxyCommand (SOCKS5) |
+
+代理命令：
+- HTTP：设置 `HTTP_PROXY=http://127.0.0.1:7890`
+- SSH：`ssh -o ProxyCommand='nc -X 5 -x 127.0.0.1:7890 %h %p'`
+
+关闭代理：`--no-proxy` → 清除所有代理环境变量
 
 ## 注意事项
 
@@ -120,6 +131,7 @@
 3. 如有冲突需手动解决后重新执行
 4. 空改动（无文件修改）会自动跳过
 5. 手机与电脑不要同时编辑同一文件（易产生冲突）
+6. **SSH 代理需要 `nc` (netcat) 工具**
 
 ## 触发方式
 
@@ -139,7 +151,9 @@ $ ~/.claude/skills/git-quick-push/scripts/git-quick-push.sh --help
 用法: git-quick-push [选项]
 
 选项:
-  --proxy        使用代理 (默认) HTTP_PROXY=http://127.0.0.1:7890
+  --proxy        使用代理 (默认)
+                 HTTP: http://127.0.0.1:7890
+                 SSH: ProxyCommand via SOCKS5
   --no-proxy     不使用代理
   -m, --msg      自定义 commit message
   -b, --branch   指定推送分支 (默认当前分支)
@@ -153,6 +167,10 @@ $ ~/.claude/skills/git-quick-push/scripts/git-quick-push.sh --help
   3. git commit
   4. git pull --rebase (拉取远程更新)
   5. git push
+
+代理支持:
+  HTTP 远程仓库: 设置 HTTP_PROXY/HTTPS_PROXY
+  SSH 远程仓库: 使用 GIT_SSH_COMMAND + ProxyCommand
 ```
 
 ## 与 Obsidian Git 插件的对比

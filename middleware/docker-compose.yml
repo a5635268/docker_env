@@ -104,7 +104,7 @@ services:
 
   # Redis
   redis:
-    image: redis:7.2.4-alpine
+    image: redis:7.4-alpine
     container_name: redis
     restart: unless-stopped
     command: redis-server /etc/redis/redis.conf --appendonly yes --requirepass ${REDIS_PASSWORD}
