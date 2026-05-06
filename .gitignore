@@ -10,3 +10,6 @@ middleware/*/data/
 # 环境变量文件（包含敏感凭据）
 middleware/.env
 !.env.example
+
+# Compound Engineering local config
+.compound-engineering/*.local.yaml
