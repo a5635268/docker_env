@@ -4,6 +4,9 @@
 !.harness-skills/
 *.log
 
+# Node modules
+node_modules/
+
 # 中间件数据目录（不纳入版本控制）
 middleware/*/data/
 
