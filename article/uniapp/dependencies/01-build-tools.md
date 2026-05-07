@@ -1,0 +1,358 @@
+# 构建工具
+
+> Vite 构建系统和自动导入插件，提供快速开发体验
+
+---
+
+本文档涵盖项目中的构建工具相关依赖包，是项目的核心基础设施。
+
+**包含包数量**：2个
+
+---
+
+## vite@5.4.21
+
+> 下一代前端构建工具，极速开发服务器和优化的生产构建
+
+### 📦 基础信息
+
+- **当前版本**：5.4.21
+- **安装命令**：
+  ```bash
+  pnpm add -D vite
+  ```
+- **官方文档**：https://vitejs.dev/
+- **GitHub**：https://github.com/vitejs/vite
+
+### 🎯 选择理由
+
+**为什么选择 Vite？**
+
+Vite 为 uni-app 跨端开发带来革命性体验：
+
+1. **极速冷启动**：无需打包，利用浏览器原生 ES 模块
+2. **即时热更新**：毫秒级更新，无论项目大小
+3. **按需编译**：仅编译当前页面代码，极大提升开发速度
+4. **优化构建**：基于 Rollup 的生产构建，自动代码分割
+
+**对比分析**：
+
+| 方案 | 优势 | 劣势 | 适用场景 |
+|------|------|------|----------|
+| **Vite** | 快速启动、HMR快、原生ES模块 | 插件生态相对年轻 | 现代前端项目 |
+| **Webpack** | 插件生态成熟、配置灵活 | 启动慢、HMR慢 | 传统项目、特殊需求 |
+| **Rollup** | 构建优化好、Tree-shaking强 | 无开发服务器 | 库开发、生产构建 |
+
+**项目决策**：选择 Vite 因为：
+- uni-app 官方推荐 Vite 构建
+- 多数据源模式（mock/api/local）需要快速切换环境
+- 开发效率极大提升，启动时间从分钟级降至秒级
+
+### 💡 实际案例
+
+**在本项目中的使用**：
+
+[vite.config.ts](../../vite.config.ts) 核心配置：
+
+```typescript
+import uni from "@dcloudio/vite-plugin-uni";
+import { defineConfig, loadEnv } from "vite";
+import { UnifiedViteWeappTailwindcssPlugin } from "weapp-tailwindcss/vite";
+import AutoImport from "unplugin-auto-import/vite";
+
+export default defineConfig(async ({ mode }) => {
+  // 加载环境变量
+  const env = loadEnv(mode, process.cwd(), '')
+
+  return {
+    plugins: [
+      uni(),  // uni-app 核心插件
+      UnifiedViteWeappTailwindcssPlugin({
+        rem2rpx: true,
+        disabled: WeappTailwindcssDisabled,
+      }),
+      AutoImport({
+        imports: ["vue", "uni-app", "pinia"],
+        dts: "./src/auto-imports.d.ts",
+      }),
+    ],
+    css: {
+      postcss: {
+        plugins: postcssPlugins,
+      },
+      preprocessorOptions: {
+        scss: {
+          silenceDeprecations: ["legacy-js-api"],
+        },
+      },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('vue') || id.includes('pinia')) {
+                return 'vendor'  // 第三方库单独打包
+              }
+            }
+          }
+        }
+      }
+    },
+    define: {
+      // 环境变量注入
+      'process.env.DATA_SOURCE_MODE': JSON.stringify(env.DATA_SOURCE_MODE || 'api'),
+      'process.env.BASE_API_URL': JSON.stringify(env.BASE_API_URL || ''),
+      'process.env.LOCAL_DATA_PATH': JSON.stringify(env.LOCAL_DATA_PATH || '/static/json')
+    }
+  };
+});
+```
+
+**关键配置说明**：
+
+1. **插件顺序**：uni() 必须第一个加载
+2. **环境变量**：支持 mock/api/local 三种模式
+3. **代码分割**：vendor chunk 提升加载性能
+4. **CSS处理**：集成 PostCSS 和 TailwindCSS
+
+**常见使用场景**：
+
+1. **开发服务器**：`pnpm dev:h5:mock` 启动 H5 开发环境
+2. **生产构建**：`pnpm build:h5` 构建生产版本
+3. **环境切换**：通过 mode 参数切换数据源模式
+4. **条件编译**：配合 uni-app 插件处理平台差异
+
+### ⚠️ 最佳实践
+
+**常见问题及解决**：
+
+1. **uni-app 插件加载顺序错误**
+   - **原因**：uni() 未在 plugins 数组第一位
+   - **解决**：确保 uni() 插件最先加载
+
+   ```typescript
+   plugins: [
+     uni(),  // 必须第一个
+     // 其他插件...
+   ]
+   ```
+
+2. **环境变量未生效**
+   - **原因**：`define` 配置缺失或环境变量文件未加载
+   - **解决**：确保 `loadEnv` 正确调用，`define` 正确注入
+
+   ```typescript
+   const env = loadEnv(mode, process.cwd(), '')
+   define: {
+     'process.env.XXX': JSON.stringify(env.XXX)
+   }
+   ```
+
+3. **小程序构建报错**
+   - **原因**：某些浏览器 API 在小程序不支持
+   - **解决**：使用 uni-app 条件编译或配置 polyfill
+
+**性能优化建议**：
+
+- **依赖预构建**：Vite 自动预构建依赖，加快冷启动
+- **代码分割**：合理配置 `manualChunks` 分离第三方库
+- **图片优化**：使用 vite-plugin-image-optimizer
+- **压缩优化**：配置 build.minify 和 terserOptions
+
+**注意事项**：
+
+- uni-app 项目必须使用 `@dcloudio/vite-plugin-uni`
+- 环境变量注入需使用 `JSON.stringify`
+- 小程序构建不支持所有 Vite 特性（如动态导入）
+
+---
+
+## unplugin-auto-import@20.3.0
+
+> 自动导入 API，无需手动 import 声明
+
+### 📦 基础信息
+
+- **当前版本**：20.3.0
+- **安装命令**：
+  ```bash
+  pnpm add -D unplugin-auto-import
+  ```
+- **官方文档**：https://github.com/antfu/unplugin-auto-import
+- **GitHub**：https://github.com/antfu/unplugin-auto-import
+
+### 🎯 选择理由
+
+**为什么选择 unplugin-auto-import？**
+
+自动导入带来的便利：
+
+1. **减少样板代码**：无需重复编写 import 语句
+2. **提升开发效率**：直接使用 API，IDE 自动提示
+3. **类型安全**：自动生成类型定义文件
+4. **多种框架支持**：Vue、uni-app、Pinia 等
+
+**对比分析**：
+
+| 方案 | 优势 | 劣势 | 适用场景 |
+|------|------|------|----------|
+| **unplugin-auto-import** | 自动化、类型安全、多框架支持 | 需要配置 | 现代前端项目 |
+| **手动导入** | 明确来源、可控 | 样板代码多 | 传统项目 |
+| **全局声明** | 简单 | 无类型提示、污染全局 | 特定场景 |
+
+**项目决策**：选择 unplugin-auto-import 因为：
+- Vue 3 Composition API（ref、computed 等）频繁使用
+- uni-app API 数量多，手动导入繁琐
+- Pinia store 方法自动导入，简化代码
+
+### 💡 实际案例
+
+**在本项目中的使用**：
+
+[vite.config.ts](../../vite.config.ts) 配置：
+
+```typescript
+AutoImport({
+  imports: ["vue", "uni-app", "pinia"],
+  dts: "./src/auto-imports.d.ts",
+})
+```
+
+**配置说明**：
+
+1. **imports: ["vue"]**：自动导入 Vue 3 Composition API
+   - ref、computed、watch、onMounted 等
+
+2. **imports: ["uni-app"]**：自动导入 uni-app API
+   - uni.navigateTo、uni.showToast 等
+
+3. **imports: ["pinia"]**：自动导入 Pinia API
+   - defineStore、storeToRefs 等
+
+4. **dts**：生成类型定义文件路径
+
+**生成的类型文件**：
+
+插件会在 [src/auto-imports.d.ts](../../src/auto-imports.d.ts) 生成类型定义：
+
+```typescript
+// Auto-generated by unplugin-auto-import
+export function ref<T>(value: T): Ref<T>
+export function computed<T>(getter: () => T): ComputedRef<T>
+export function watch(...)
+export function onMounted(...)
+// ... 其他自动导入的 API
+```
+
+**实际使用示例**：
+
+无需手动导入，直接使用：
+
+```typescript
+// 传统方式
+import { ref, computed, onMounted } from 'vue'
+import { defineStore } from 'pinia'
+
+const count = ref(0)
+const doubled = computed(() => count.value * 2)
+
+// 自动导入方式（本项目）
+const count = ref(0)  // ref 自动导入
+const doubled = computed(() => count.value * 2)  // computed 自动导入
+
+export const useUserStore = defineStore('user', () => {  // defineStore 自动导入
+  // ...
+})
+
+onMounted(() => {  // onMounted 自动导入
+  console.log('mounted')
+})
+```
+
+**常见使用场景**：
+
+1. **Vue Composition API**：ref、computed、watch、生命周期钩子
+2. **uni-app API**：uni.navigateTo、uni.showToast 等
+3. **Pinia API**：defineStore、storeToRefs
+4. **自定义 API**：项目全局工具函数
+
+### ⚠️ 最佳实践
+
+**常见问题及解决**：
+
+1. **IDE 无类型提示**
+   - **原因**：生成的 `.d.ts` 文件未被 TypeScript 识别
+   - **解决**：确保 `tsconfig.json` 包含该文件，重启 IDE
+
+   ```json
+   {
+     "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"]
+   }
+   ```
+
+2. **自动导入污染全局**
+   - **原因**：某些 API 不希望全局可用
+   - **解决**：配置 `ignore` 或使用显式导入
+
+   ```typescript
+   AutoImport({
+     imports: ["vue"],
+     ignore: ["unref"]  // 不自动导入 unref
+   })
+   ```
+
+3. **uni-app API 类型错误**
+   - **原因**：自动导入的类型与 uni-app 实际类型不匹配
+   - **解决**：安装 `@dcloudio/types` 提供完整类型
+
+**性能优化建议**：
+
+- **按需导入**：仅配置项目实际使用的 API
+- **定期清理**：删除 `auto-imports.d.ts` 并重新生成，避免过期类型
+
+**注意事项**：
+
+- 生成的 `.d.ts` 文件应添加到 `.gitignore`（可选）
+- 新增自动导入 API 后需重启开发服务器
+- uni-app API 需配合 `@dcloudio/types` 才有完整类型提示
+
+---
+
+## 构建工具体系总结
+
+### Vite 构建流程
+
+```
+开发模式：
+1. Vite 启动开发服务器（秒级）
+2. 按需编译：仅编译当前访问页面
+3. 热更新：文件变更 → 毫秒级更新浏览器
+
+生产构建：
+1. Vite 调用 Rollup 进行完整构建
+2. 代码分割：vendor chunk + 页面 chunks
+3. 压缩优化：Terser/ESBuild 压缩代码
+4. 输出到 dist/build/ 目录
+```
+
+### 插件协同工作
+
+| 插件 | 功能 | 依赖关系 |
+|------|------|---------|
+| @dcloudio/vite-plugin-uni | uni-app 核心构建 | 必须第一个加载 |
+| weapp-tailwindcss/vite | TailwindCSS 小程序适配 | 依赖 uni 插件 |
+| unplugin-auto-import | API 自动导入 | 独立插件 |
+| PostCSS + TailwindCSS | CSS 处理 | 通过 postcssPlugins 配置 |
+
+### 开发效率提升
+
+| 指标 | Webpack | Vite | 提升 |
+|------|---------|------|------|
+| 冷启动时间 | 30-60秒 | 1-2秒 | **95%↓** |
+| 热更新速度 | 1-3秒 | 50-200ms | **90%↓** |
+| 构建时间 | 30-60秒 | 10-20秒 | **50%↓** |
+
+---
+
+*文档生成时间：2026-05-07*
